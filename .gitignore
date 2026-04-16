@@ -151,3 +151,5 @@ examples/*.mp4
 
 # sphinx docs output
 docs/html
+
+_archive/

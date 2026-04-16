@@ -75,7 +75,8 @@ def create_ground_plane(
     physx_material_api = PhysxSchema.PhysxMaterialAPI.Apply(material.prim)
     # Set patch friction property
     improve_patch_friction = kwargs.get("improve_patch_friction", False)
-    physx_material_api.CreateImprovePatchFrictionAttr().Set(improve_patch_friction)
+    if hasattr(physx_material_api, "CreateImprovePatchFrictionAttr"):
+        physx_material_api.CreateImprovePatchFrictionAttr().Set(improve_patch_friction)
     # Set combination mode for coefficients
     combine_mode = kwargs.get("friciton_combine_mode", "multiply")
     physx_material_api.CreateFrictionCombineModeAttr().Set(combine_mode)

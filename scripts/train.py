@@ -76,15 +76,17 @@ def main(cfg):
     env.set_seed(cfg.seed)
 
     try:
-        policy = ALGOS[cfg.algo.name.lower()](
-            cfg.algo,
-            env.observation_spec,
-            env.action_spec,
-            env.reward_spec,
-            device=base_env.device
-        )
+        policy_cls = ALGOS[cfg.algo.name.lower()]
     except KeyError:
         raise NotImplementedError(f"Unknown algorithm: {cfg.algo.name}")
+
+    policy = policy_cls(
+        cfg.algo,
+        env.observation_spec,
+        env.action_spec,
+        env.reward_spec,
+        device=base_env.device
+    )
 
     frames_per_batch = env.num_envs * int(cfg.algo.train_every)
     total_frames = cfg.get("total_frames", -1) // frames_per_batch * frames_per_batch

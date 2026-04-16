@@ -43,11 +43,17 @@ from torchrl.envs import EnvBase
 from omni_drones.robots.robot import RobotBase
 from omni_drones.utils.torchrl import AgentSpec
 
-from omni.isaac.debug_draw import _debug_draw
+try:
+    from isaacsim.util.debug_draw import _debug_draw
+except Exception:
+    try:
+        from omni.isaac.debug_draw import _debug_draw
+    except Exception:
+        _debug_draw = None
 
 class DebugDraw:
     def __init__(self):
-        self._draw = _debug_draw.acquire_debug_draw_interface()
+        self._draw = _debug_draw.acquire_debug_draw_interface() if _debug_draw is not None else None
 
     def clear(self):
         self._draw.clear_lines()

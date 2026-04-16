@@ -60,14 +60,19 @@ class RotorConfig:
 @dataclass
 class DragonCfg(RobotCfg):
     num_links: int = 4
-    articulation_props: ArticulationRootPropertiesCfg = ArticulationRootPropertiesCfg(
-        solver_velocity_iteration_count=16, enable_self_collisions=True)
+    articulation_props: ArticulationRootPropertiesCfg = field(
+        default_factory=lambda: ArticulationRootPropertiesCfg(
+            solver_velocity_iteration_count=16, enable_self_collisions=True
+        )
+    )
     force_sensor: bool = False
-    rotor_cfg: RotorConfig = RotorConfig(
-        directions=torch.tensor([1, -1]),
-        force_constants=torch.ones(2) * 7.2e-6,
-        moment_constants=torch.ones(2) * 1.08e-7,
-        max_rotation_velocities=torch.ones(2) * 800
+    rotor_cfg: RotorConfig = field(
+        default_factory=lambda: RotorConfig(
+            directions=torch.tensor([1, -1]),
+            force_constants=torch.ones(2) * 7.2e-6,
+            moment_constants=torch.ones(2) * 1.08e-7,
+            max_rotation_velocities=torch.ones(2) * 800,
+        )
     )
 
     def __post_init__(self):

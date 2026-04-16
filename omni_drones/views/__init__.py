@@ -23,7 +23,7 @@
 
 import torch
 from typing import Optional, Tuple, List
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 
 from typing import List, Optional, Tuple, Union
 import numpy as np
@@ -43,8 +43,10 @@ def require_sim_initialized(func):
 
     @functools.wraps(func)
     def _func(*args, **kwargs):
-        if SimulationContext.instance()._physics_sim_view is None:
-            raise RuntimeError("SimulationContext not initialzed.")
+        sim_ctx = SimulationContext.instance()
+        physics_sim_view = getattr(sim_ctx, "_physics_sim_view", None)
+        if physics_sim_view is None:
+            print("SimulationContext not fully initialized in Isaac Sim 5.1, continue.")
         return func(*args, **kwargs)
 
     return _func
@@ -224,14 +226,17 @@ class ArticulationView(_ArticulationView):
         if not omni.timeline.get_timeline_interface().is_stopped() and self._physics_view is not None:
             if self.num_dof == 0:
                 return None
-            self._physics_sim_view.enable_warnings(False)
+            physics_sim_view = getattr(self, '_physics_sim_view', None)
+            if physics_sim_view is not None:
+                physics_sim_view.enable_warnings(False)
             joint_positions = self._physics_view.get_dof_position_targets()
             if clone:
                 joint_positions = self._backend_utils.clone_tensor(joint_positions, device=self._device)
             joint_velocities = self._physics_view.get_dof_velocity_targets()
             if clone:
                 joint_velocities = self._backend_utils.clone_tensor(joint_velocities, device=self._device)
-            self._physics_sim_view.enable_warnings(True)
+            if physics_sim_view is not None:
+                physics_sim_view.enable_warnings(True)
             # TODO: implement the effort part
             return ArticulationActions(
                 joint_positions=joint_positions,
@@ -244,18 +249,23 @@ class ArticulationView(_ArticulationView):
             return None
 
     def get_world_poses(
-        self, env_indices: Optional[torch.Tensor] = None, clone: bool = True
+        self,
+        env_indices: Optional[torch.Tensor] = None,
+        clone: bool = True,
+        usd=None,
+        **kwargs,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         indices = self._resolve_env_indices(env_indices)
         if self._physics_view is not None:
-            with disable_warnings(self._physics_sim_view):
+            physics_sim_view = getattr(self, '_physics_sim_view', None)
+            with (disable_warnings(physics_sim_view) if physics_sim_view is not None else nullcontext()):
                 poses = self._physics_view.get_root_transforms()[indices]
                 poses = torch.unflatten(poses, 0, self.shape)
             if clone:
                 poses = poses.clone()
             return poses[..., :3], poses[..., [6, 3, 4, 5]]
         else:
-            pos, rot = super().get_world_poses(indices, clone)
+            pos, rot = super().get_world_poses(indices, clone, usd=usd)
             return pos.unflatten(0, self.shape), rot.unflatten(0, self.shape)
 
     def set_world_poses(
@@ -264,7 +274,8 @@ class ArticulationView(_ArticulationView):
         orientations: Optional[torch.Tensor] = None,
         env_indices: Optional[torch.Tensor] = None,
     ) -> None:
-        with disable_warnings(self._physics_sim_view):
+        physics_sim_view = getattr(self, '_physics_sim_view', None)
+        with (disable_warnings(physics_sim_view) if physics_sim_view is not None else nullcontext()):
             indices = self._resolve_env_indices(env_indices)
             poses = self._physics_view.get_root_transforms()
             if positions is not None:
@@ -388,7 +399,8 @@ class ArticulationView(_ArticulationView):
         return super().set_body_masses(values.reshape(-1, self.num_bodies), indices)
 
     def get_force_sensor_forces(self, env_indices: Optional[torch.Tensor] = None, clone: bool = False) -> torch.Tensor:
-        with disable_warnings(self._physics_sim_view):
+        physics_sim_view = getattr(self, '_physics_sim_view', None)
+        with (disable_warnings(physics_sim_view) if physics_sim_view is not None else nullcontext()):
             forces = torch.unflatten(self._physics_view.get_force_sensor_forces(), 0, self.shape)
         if clone:
             forces = forces.clone()
@@ -471,7 +483,8 @@ class RigidPrimView(_RigidPrimView):
         orientations: Optional[torch.Tensor] = None,
         env_indices: Optional[torch.Tensor] = None,
     ) -> None:
-        with disable_warnings(self._physics_sim_view):
+        physics_sim_view = getattr(self, '_physics_sim_view', None)
+        with (disable_warnings(physics_sim_view) if physics_sim_view is not None else nullcontext()):
             indices = self._resolve_env_indices(env_indices)
             poses = self._physics_view.get_transforms()
             if positions is not None:

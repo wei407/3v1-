@@ -1,0 +1,25 @@
+name: Capture3v1
+
+defaults:
+  - /base/env_base@_here_
+  - /base/sim_base@_here_
+
+env:
+  num_envs: 256
+  env_spacing: 10
+  max_episode_length: 500
+
+drone_model:
+  name: Firefly
+  controller: LeePositionController
+
+num_pursuers: 3
+num_evaders: 1
+capture_radius: 0.6
+arena_height: 1.5
+init_spread: 0.35
+safe_z_min: 0.2
+boundary_xy: 6.0
+
+ravel_obs_central: false
+action_transform: null
